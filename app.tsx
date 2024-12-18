@@ -1,3 +1,7 @@
+const CustomSummary: React.FC<{ message: string }> = ({ message }) => (
+  <div style={{ padding: '10px', backgroundColor: '#f0f0f0' }}>{message}</div>
+);
+
 const wizardConfig: WizardConfig[] = [
   {
     id: 'step1',
@@ -7,6 +11,14 @@ const wizardConfig: WizardConfig[] = [
       { id: 'name', label: 'Name', type: 'text', validation: (val) => (!val ? 'Name is required' : null) },
       { id: 'age', label: 'Age', type: 'number', validation: (val) => (val <= 0 ? 'Age must be positive' : null) },
     ],
+    components: [
+      {
+        id: 'summary',
+        component: CustomSummary,
+        props: { message: 'This is a summary component for Step 1' },
+        order: 1,
+      },
+    ],
   },
   {
     id: 'step2',
@@ -15,6 +27,14 @@ const wizardConfig: WizardConfig[] = [
     formFields: [
       { id: 'address', label: 'Address', type: 'text' },
       { id: 'city', label: 'City', type: 'text' },
+    ],
+    components: [
+      {
+        id: 'summary',
+        component: CustomSummary,
+        props: { message: 'This is a summary component for Step 2' },
+        order: 1,
+      },
     ],
   },
 ];
