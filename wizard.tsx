@@ -1,10 +1,3 @@
-import React, { useState } from 'react';
-
-type WizardProps = {
-  config: WizardConfig[];
-  onSave: (data: Record<string, RowData[]>) => void;
-};
-
 export const Wizard: React.FC<WizardProps> = ({ config, onSave }) => {
   const [state, setState] = useState<WizardState>({
     activeTab: config[0].id,
@@ -13,31 +6,6 @@ export const Wizard: React.FC<WizardProps> = ({ config, onSave }) => {
   });
 
   const activeConfig = config.find((tab) => tab.id === state.activeTab)!;
-
-  const handleAddRow = () => setState((prev) => ({ ...prev, modal: { isOpen: true, editingRow: null } }));
-  const handleEditRow = (row: RowData) =>
-    setState((prev) => ({ ...prev, modal: { isOpen: true, editingRow: row } }));
-  const handleDeleteRow = (rowId: string) =>
-    setState((prev) => ({
-      ...prev,
-      data: {
-        ...prev.data,
-        [state.activeTab]: prev.data[state.activeTab].filter((row) => row.id !== rowId),
-      },
-    }));
-
-  const handleSaveRow = (row: RowData) => {
-    setState((prev) => ({
-      ...prev,
-      data: {
-        ...prev.data,
-        [state.activeTab]: prev.modal.editingRow
-          ? prev.data[state.activeTab].map((r) => (r.id === row.id ? row : r))
-          : [...prev.data[state.activeTab], { ...row, id: Date.now().toString() }],
-      },
-      modal: { isOpen: false, editingRow: null },
-    }));
-  };
 
   const handleTabChange = (tabId: string) => setState((prev) => ({ ...prev, activeTab: tabId }));
   const handleFinish = () => onSave(state.data);
@@ -57,28 +25,60 @@ export const Wizard: React.FC<WizardProps> = ({ config, onSave }) => {
         ))}
       </div>
 
-      {/* Table */}
-      <Table
-        rows={state.data[state.activeTab]}
-        columns={activeConfig.columns}
-        onEdit={handleEditRow}
-        onDelete={handleDeleteRow}
-      />
-      <button onClick={handleAddRow}>Add Row</button>
+      {/* Render Custom Components and Table */}
+      <div className="tab-content">
+        {activeConfig.components
+          ?.sort((a, b) => a.order - b.order)
+          .map((comp) => (
+            <div key={comp.id} className="custom-component">
+              <comp.component {...comp.props} />
+            </div>
+          ))}
+
+        <Table
+          rows={state.data[state.activeTab]}
+          columns={activeConfig.columns}
+          onEdit={(row) => setState((prev) => ({ ...prev, modal: { isOpen: true, editingRow: row } }))}
+          onDelete={(id) =>
+            setState((prev) => ({
+              ...prev,
+              data: {
+                ...prev.data,
+                [state.activeTab]: prev.data[state.activeTab].filter((row) => row.id !== id),
+              },
+            }))
+          }
+        />
+        <button onClick={() => setState((prev) => ({ ...prev, modal: { isOpen: true, editingRow: null } }))}>
+          Add Row
+        </button>
+      </div>
 
       {/* Modal */}
-      <Modal isOpen={state.modal.isOpen} onClose={() => setState((prev) => ({ ...prev, modal: { isOpen: false, editingRow: null } }))}>
+      <Modal
+        isOpen={state.modal.isOpen}
+        onClose={() => setState((prev) => ({ ...prev, modal: { isOpen: false, editingRow: null } }))}
+      >
         <DynamicForm
           fields={activeConfig.formFields}
           data={state.modal.editingRow || {}}
-          onSubmit={handleSaveRow}
+          onSubmit={(row) => {
+            setState((prev) => ({
+              ...prev,
+              data: {
+                ...prev.data,
+                [state.activeTab]: prev.modal.editingRow
+                  ? prev.data[state.activeTab].map((r) => (r.id === row.id ? row : r))
+                  : [...prev.data[state.activeTab], { ...row, id: Date.now().toString() }],
+              },
+              modal: { isOpen: false, editingRow: null },
+            }));
+          }}
         />
       </Modal>
 
       {/* Finish Button */}
-      {state.activeTab === config[config.length - 1].id && (
-        <button onClick={handleFinish}>Finish</button>
-      )}
+      {state.activeTab === config[config.length - 1].id && <button onClick={handleFinish}>Finish</button>}
     </div>
   );
 };
